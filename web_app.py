@@ -2,7 +2,7 @@
 """
 네이버 블로그 자동화 웹 인터페이스
 """
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import os
 from datetime import datetime
 from advanced_keyword_analyzer import AdvancedKeywordAnalyzer
@@ -12,15 +12,18 @@ from dotenv import load_dotenv
 import json
 from keyword_refiner import KeywordRefiner
 from auto_updater import updater
+from auth import requires_auth, handle_login, logout
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 analyzer = AdvancedKeywordAnalyzer()
 refiner = KeywordRefiner()
 
-# 자동 업데이트 스케줄러 시작
-updater.start_scheduler()
+# 자동 업데이트 스케줄러 시작 (개발 환경에서만)
+if os.environ.get('FLASK_ENV') != 'production':
+    updater.start_scheduler()
 
 # 전역 변수로 분석 결과 저장 (이제 updater의 캐시 사용)
 cached_analysis = {}
@@ -31,9 +34,22 @@ def index():
     return render_template('index.html')
 
 @app.route('/admin')
+@requires_auth
 def admin():
     """관리자 페이지"""
     return render_template('admin.html')
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """관리자 로그인"""
+    if request.method == 'POST':
+        return handle_login()
+    return handle_login()
+
+@app.route('/admin/logout')
+def admin_logout():
+    """관리자 로그아웃"""
+    return logout()
 
 @app.route('/api/trends', methods=['GET'])
 def get_trends():
@@ -326,6 +342,7 @@ def get_recommendation_text(score):
         return "⚠️ 신중히 검토"
 
 @app.route('/api/admin/status', methods=['GET'])
+@requires_auth
 def admin_status():
     """관리자 상태 확인"""
     status = {
@@ -338,6 +355,7 @@ def admin_status():
     return jsonify(status)
 
 @app.route('/api/admin/force-update', methods=['POST'])
+@requires_auth
 def admin_force_update():
     """강제 업데이트"""
     update_type = request.json.get('type', 'all')
