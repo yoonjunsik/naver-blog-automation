@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+ENV/
+
+# 로컬 데이터
+data/
+generated_content/
+*.log
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# 환경 설정 (Docker 빌드 시 별도 주입)
+.env
+
+# 테스트 파일
+test_*.py
+*_test.py
+
+# 문서
+*.md
+docs/
+
+# 임시 파일
+*.tmp
+*.temp
+*.zip

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지 - 네이버 블로그 자동화</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: #212529;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+        
+        .status-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-item {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .status-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #03c75a;
+            margin-bottom: 10px;
+        }
+        
+        .status-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .update-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #03c75a;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #02a048;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .log-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            padding: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .success {
+            color: #28a745;
+        }
+        
+        .error {
+            color: #dc3545;
+        }
+        
+        .info {
+            color: #17a2b8;
+        }
+        
+        .schedule-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .schedule-info h3 {
+            margin-bottom: 10px;
+            color: #0066cc;
+        }
+        
+        .schedule-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🔧 관리자 페이지</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="status-card">
+            <h2>시스템 상태</h2>
+            <div class="status-grid" id="statusGrid">
+                <!-- 상태 정보가 여기에 표시됨 -->
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h2>자동 업데이트 스케줄</h2>
+            <div class="schedule-info">
+                <h3>📅 업데이트 주기</h3>
+                <div class="schedule-item">• 트렌드 키워드: 매주 월요일 새벽 3시</div>
+                <div class="schedule-item">• 인기 키워드: 매일 새벽 4시</div>
+                <div class="schedule-item">• 캐시 정리: 매시간 (24시간 이상 경과 데이터 삭제)</div>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h2>수동 업데이트</h2>
+            <div class="update-buttons">
+                <button class="btn btn-primary" onclick="forceUpdate('trends')">
+                    📊 트렌드 키워드 업데이트
+                </button>
+                <button class="btn btn-primary" onclick="forceUpdate('popular')">
+                    🔥 인기 키워드 업데이트
+                </button>
+                <button class="btn btn-secondary" onclick="forceUpdate('cache')">
+                    🗑️ 캐시 정리
+                </button>
+                <button class="btn btn-danger" onclick="forceUpdate('all')">
+                    🔄 전체 업데이트
+                </button>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h2>업데이트 로그</h2>
+            <div class="log-section" id="logSection">
+                <div class="log-entry info">시스템이 시작되었습니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 상태 정보 로드
+        function loadStatus() {
+            fetch('/api/admin/status')
+                .then(response => response.json())
+                .then(data => {
+                    const grid = document.getElementById('statusGrid');
+                    grid.innerHTML = `
+                        <div class="status-item">
+                            <div class="status-value">${data.trend_keywords_count}</div>
+                            <div class="status-label">트렌드 카테고리</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value">${data.popular_keywords_count}</div>
+                            <div class="status-label">인기 키워드</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value">${data.cache_entries}</div>
+                            <div class="status-label">캐시 항목</div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // 강제 업데이트
+        function forceUpdate(type) {
+            if (!confirm(`정말로 ${type} 업데이트를 실행하시겠습니까?`)) {
+                return;
+            }
+
+            addLog(`${type} 업데이트 시작...`, 'info');
+
+            fetch('/api/admin/force-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ type: type })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addLog(data.message, 'success');
+                    loadStatus(); // 상태 새로고침
+                } else {
+                    addLog(`오류: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                addLog(`업데이트 실패: ${error}`, 'error');
+            });
+        }
+
+        // 로그 추가
+        function addLog(message, type = 'info') {
+            const logSection = document.getElementById('logSection');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logSection.insertBefore(entry, logSection.firstChild);
+            
+            // 최대 50개 로그 유지
+            while (logSection.children.length > 50) {
+                logSection.removeChild(logSection.lastChild);
+            }
+        }
+
+        // 페이지 로드 시 상태 확인
+        window.onload = function() {
+            loadStatus();
+            // 30초마다 상태 새로고침
+            setInterval(loadStatus, 30000);
+        };
+    </script>
+</body>
+</html>
